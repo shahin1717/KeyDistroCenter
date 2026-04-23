@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keydistrocenter"
+version = "0.1.0"
+description = "Key Distribution Center secure messaging app"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn[standard]==0.33.0",
+    "sqlalchemy==2.0.40",
+    "pydantic==2.10.6",
+    "pydantic-settings==2.8.1",
+    "python-dotenv==1.0.1",
+    "python-multipart==0.0.20",
+    "jinja2==3.1.6",
+    "itsdangerous==2.2.0",
+    "bcrypt==4.3.0",
+    "cryptography==46.0.7",
+    "APScheduler==3.11.0",
+    "email-validator==2.2.0",
+    "mysqlclient==2.2.7",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]

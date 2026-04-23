@@ -2,6 +2,22 @@
 
 A secure messaging app using RSA + Caesar cipher hybrid encryption.
 
+## Installation
+
+1. Create and activate a virtual environment.
+2. Choose one dependency install method:
+
+- Using `requirements.txt`:
+  - `pip install -r requirements.txt`
+- Using `pyproject.toml`:
+  - `pip install -e .`
+
+3. Create `.env` with your settings:
+   - `DATABASE_URL=...`
+   - `PRIVATE_KEY_ENCRYPTION_KEY=...` (Fernet key)
+4. Run the app:
+   - `python -m app.main`
+
 ## Project Structure
 
 ```
@@ -44,6 +60,7 @@ kdc/
 │   └── test_messages.py
 ├── .env.example
 ├── requirements.txt
+├── pyproject.toml
 └── README.md
 ```
 
@@ -62,7 +79,7 @@ kdc/
 
 Page routes (HTML) stay at top level: `/`, `/login`, `/register`, `/profile`, `/send`, `/messages`
 
-## Key Improvements
+## Key Features
 
 - **Modular structure** — each concern in its own file
 - **Proper REST** — GET retrieves, POST creates, DELETE removes
