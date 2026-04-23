@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 
 from app.models.db import User
 from app.schemas.auth import RegisterRequest, LoginRequest
-from app.core.security import hash_password, verify_password
+from app.core.security import hash_password, verify_password, encrypt_private_key_value
 from app.core.crypto import generate_keypair
 from app.core.config import get_settings
 
@@ -33,8 +33,8 @@ def register(db: Session, data: RegisterRequest) -> User:
         password=hash_password(data.password),
         public_key_e=public_key[0],
         public_key_n=public_key[1],
-        private_key_d=private_key[0],
-        private_key_n=private_key[1],
+        private_key_d=encrypt_private_key_value(private_key[0]),
+        private_key_n=encrypt_private_key_value(private_key[1]),
     )
     db.add(user)
     db.commit()

@@ -1,12 +1,14 @@
 import logging
 import secrets
+from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -15,6 +17,8 @@ from app.core.config import get_settings
 from app.models.db import create_tables, get_db
 from app.services.user_service import get_profile
 from app.services.message_service import get_messages
+from app.services import auth_service
+from app.schemas.auth import LoginRequest, RegisterRequest
 from app.utils.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(
@@ -23,6 +27,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def _safe_validation_detail(e: ValidationError) -> list[dict]:
+    return [
+        {"loc": err.get("loc", ()), "msg": err.get("msg", "Invalid input"), "type": err.get("type", "value_error")}
+        for err in e.errors()
+    ]
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    create_tables()
+    start_scheduler()
+    try:
+        yield
+    finally:
+        stop_scheduler()
+
 
 # ---------------------------------------------------------------------------
 # App factory
@@ -33,6 +55,7 @@ def create_app() -> FastAPI:
         title=settings.APP_NAME,
         docs_url="/api/docs",
         redoc_url="/api/redoc",
+        lifespan=lifespan,
     )
 
     # --- Static files & templates ---
@@ -58,16 +81,6 @@ def create_app() -> FastAPI:
     # --- API routes ---
     app.include_router(api_router)
 
-    # --- Lifecycle ---
-    @app.on_event("startup")
-    def on_startup():
-        create_tables()
-        start_scheduler()
-
-    @app.on_event("shutdown")
-    def on_shutdown():
-        stop_scheduler()
-
     # -----------------------------------------------------------------------
     # Page routes (HTML)
     # -----------------------------------------------------------------------
@@ -88,6 +101,36 @@ def create_app() -> FastAPI:
         if request.session.get("user"):
             return RedirectResponse("/profile", 303)
         return templates.TemplateResponse("register.html", {"request": request})
+
+    @app.post("/register")
+    async def register_submit(
+        request: Request,
+        username: str = Form(...),
+        password: str = Form(...),
+        db: Session = Depends(get_db),
+    ):
+        try:
+            data = RegisterRequest(username=username, password=password)
+        except ValidationError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=_safe_validation_detail(e))
+        user = auth_service.register(db, data)
+        request.session["user"] = user.username
+        return RedirectResponse(url="/profile", status_code=status.HTTP_303_SEE_OTHER)
+
+    @app.post("/login")
+    async def login_submit(
+        request: Request,
+        username: str = Form(...),
+        password: str = Form(...),
+        db: Session = Depends(get_db),
+    ):
+        try:
+            data = LoginRequest(username=username, password=password)
+        except ValidationError as e:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=_safe_validation_detail(e))
+        user = auth_service.login(db, data)
+        request.session["user"] = user.username
+        return RedirectResponse(url="/profile", status_code=status.HTTP_303_SEE_OTHER)
 
     @app.get("/profile", response_class=HTMLResponse)
     def profile_page(request: Request, db: Session = Depends(get_db)):

@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from app.models.db import Message, User
 from app.schemas.message import SendMessageRequest, MessageResponse
 from app.core.crypto import rsa_encrypt, rsa_decrypt, caesar_encrypt, caesar_decrypt
+from app.core.security import decrypt_private_key_value
 from app.core.config import get_settings
 from app.services.auth_service import get_user_by_username
 
@@ -49,7 +50,10 @@ def get_messages(db: Session, username: str) -> list[MessageResponse]:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    private_key = (user.private_key_d, user.private_key_n)
+    private_key = (
+        decrypt_private_key_value(user.private_key_d),
+        decrypt_private_key_value(user.private_key_n),
+    )
     messages = db.query(Message).filter(Message.recipient_username == username).all()
 
     results = []

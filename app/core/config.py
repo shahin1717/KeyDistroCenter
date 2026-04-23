@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -9,7 +10,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
 
     # Database
-    DATABASE_URL: str = "sqlite:///./kdc.db"
+    DATABASE_URL: str = Field(..., env="DATABASE_URL")
 
     # Session
     SESSION_MAX_AGE: int = 3600  # 1 hour
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
     # Crypto
     RSA_PRIME_MIN: int = 1000
     RSA_PRIME_MAX: int = 9999
+    PRIVATE_KEY_ENCRYPTION_KEY: str = Field(..., env="PRIVATE_KEY_ENCRYPTION_KEY")
 
     # Message cleanup
     MESSAGE_TTL_MINUTES: int = 5
